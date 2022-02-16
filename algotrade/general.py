@@ -107,7 +107,7 @@ def getBuySellDates(
 def calcProfitsWithDate(
     df: pd.DataFrame,
     buy_dates: List[pd.Timestamp],
-    sell_dates: List[List[pd.Timestamp]],
+    sell_dates: List[pd.Timestamp],
 ) -> List[Tuple[float, pd.Timestamp, pd.Timestamp]]:
     """
     Calculates and returns list of lists that contain [profit, buy_date, sell_date] by subtracting buying from selling date closing prices
