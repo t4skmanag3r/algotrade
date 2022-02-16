@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import List, Union, Tuple, Dict, 
+from typing import List, Union, Tuple, Dict
 
 
 def get_sp500() -> List[str]:
@@ -138,7 +138,9 @@ def calcProfitsWithDate(
     return profits
 
 
-def calcStats(profits: List[Tuple[float, pd.Timestamp, pd.Timestamp]]) -> Dict[str, float]:
+def calcStats(
+    profits: List[Tuple[float, pd.Timestamp, pd.Timestamp]]
+) -> Dict[str, float]:
     """
     Calculates statistics based on given list of profits
 
@@ -183,7 +185,7 @@ def getStrategies() -> List[str]:
     return [f for f in dir(strat) if not f.startswith("_")]
 
 
-def __get_and_calculate_data(ticker, start_date): # deprecate this
+def __get_and_calculate_data(ticker, start_date):  # deprecate this
     # Gets data and applies calculations
     from algotrade.calculations import calculateData
 
@@ -192,7 +194,9 @@ def __get_and_calculate_data(ticker, start_date): # deprecate this
     return df
 
 
-def calculateTickersDf(ticker_list : List[str], start_date : str) -> Union[pd.DataFrame, pd.Series]:
+def calculateTickersDf(
+    ticker_list: List[str], start_date: str
+) -> Union[pd.DataFrame, pd.Series]:
     """
     Retrieves and calculates data for multiple tickers in list using multiprocessing, returns merged dataframe
 
@@ -231,7 +235,9 @@ def calculateTickersDf(ticker_list : List[str], start_date : str) -> Union[pd.Da
     return pd.concat(results)
 
 
-def calculateInvestment(timespan_months : int, investment_sum : int, profit_percent : int):
+def calculateInvestment(
+    timespan_months: int, investment_sum: int, profit_percent: float
+):
     """
     Calculates and prints investment statistics for given timespan, investment sum and average profit percentage
 
@@ -240,7 +246,7 @@ def calculateInvestment(timespan_months : int, investment_sum : int, profit_perc
             timespan in months to calculate investment for
         investment_sum : int
             sum of money invested monthly
-        profit_percent : int
+        profit_percent : float
             average monthly percent return on investment ex.: 7 %
 
     Returns:
