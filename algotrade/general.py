@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
-from pandas._libs.tslibs.timestamps import Timestamp
+from typing import List, Union, Tuple, Dict, 
 
-def get_sp500():
+
+def get_sp500() -> List[str]:
     """
-    Gets tickers from S&P500.
+    Gets all tickers from the S&P500 index fund
 
     Returns:
         list(str)
@@ -16,20 +17,23 @@ def get_sp500():
     tickers = [ticker.replace(".", "-") for ticker in tickers]
     return tickers
 
-def get_revolut_stocks():
+
+def get_revolut_stocks() -> List[str]:
     """
-    Gets tickers offered on Revolut platform.
+    Gets all tickers offered on Revolut trading platform.
 
     Returns:
         list(str)
     """
     import requests
-    req = requests.get('https://globefunder.com/revolut-stocks-list/')
-    tickers = list(pd.read_html(req.content)[0]['Symbol'])
+
+    req = requests.get("https://globefunder.com/revolut-stocks-list/")
+    tickers = list(pd.read_html(req.content)[0]["Symbol"])
     tickers = [ticker.replace(".", "-") for ticker in tickers]
     return tickers
 
-def getData(ticker, start_date):
+
+def getData(ticker: str, start_date: str) -> pd.DataFrame:
     """
     Gets historical data for ticker from start date to current date.
 
@@ -43,15 +47,21 @@ def getData(ticker, start_date):
         pandas.DataFrame()
     """
     import yahoo_fin.stock_info as yf
+
     try:
         df = yf.get_data(ticker, start_date=start_date)
     except Exception as e:
         raise Exception
     if len(df) == 0:
-        print('Failed to get data')
+        print("Failed to get data")
     return df
 
-def getBuySellDates(df, buy_signals, sell_signals):
+
+def getBuySellDates(
+    df: pd.DataFrame,
+    buy_signals: Union[List[bool], np.ndarray],
+    sell_signals: Union[List[bool], np.ndarray],
+) -> Tuple[List[pd.Timestamp], List[pd.Timestamp]]:
     """
     Uses logic to invert buy/sell signals and retrieve buy/sell dates
 
@@ -67,7 +77,7 @@ def getBuySellDates(df, buy_signals, sell_signals):
         buy_dates : list(pandas.Timestamp)
             buying dates
         sell_dates : list(pandas.Timestamp)
-            selling_dates
+            selling dates
     """
     df["buy_signal"], df["sell_signal"] = buy_signals, sell_signals
     buy_dates = []
@@ -93,9 +103,14 @@ def getBuySellDates(df, buy_signals, sell_signals):
             first = False
     return buy_dates, sell_dates
 
-def calcProfitsWithDate(df, buy_dates, sell_dates):
+
+def calcProfitsWithDate(
+    df: pd.DataFrame,
+    buy_dates: List[pd.Timestamp],
+    sell_dates: List[List[pd.Timestamp]],
+) -> List[Tuple[float, pd.Timestamp, pd.Timestamp]]:
     """
-    Calculates and returns list of profits by buying/selling date closing price
+    Calculates and returns list of lists that contain [profit, buy_date, sell_date] by subtracting buying from selling date closing prices
 
     Args:
         df : pandas.DataFrame()
@@ -104,10 +119,10 @@ def calcProfitsWithDate(df, buy_dates, sell_dates):
             buying dates | from general.getBuySellDates()[0]
         sell_dates : list(pandas.Timestamp)
             selling dates | from general.getBuySellDates()[1]
-    
+
     Returns:
-        list(int)
-            list of profits
+        list(list(float, pd.Timestamp, pd.Timestamp))
+            list of [profit, buy_date, sell_date]
     """
     profits = []
     for i in range(0, len(buy_dates)):
@@ -122,16 +137,17 @@ def calcProfitsWithDate(df, buy_dates, sell_dates):
             )
     return profits
 
-def calcStats(profits):
+
+def calcStats(profits: List[Tuple[float, pd.Timestamp, pd.Timestamp]]) -> Dict[str, float]:
     """
     Calculates statistics based on given list of profits
 
     Args:
-        profits : list(int)
+        profits : list(list(float, pd.Timestamp, pd.Timestamp))
             list of profits | from general.calcProfitsWithDate()
 
     Returns:
-        dict(str:int)
+        dict(str:float)
     """
 
     profit_vals = [x[0] for x in profits]
@@ -153,27 +169,34 @@ def calcStats(profits):
         "profit_mean": profit_mean,
         "profit_median": profit_median,
         "profit_win": profit_win,
-        "num_trades": num_trades 
-        }
+        "num_trades": num_trades,
+    }
     return stats
 
-def getStrategies():
-    import algotrade.strategies as strat
-    return [f for f in dir(strat) if not f.startswith('_')]
 
-def __get_and_calculate_data(ticker, start_date):
+def getStrategies() -> List[str]:
+    """
+    returns a list of avaliable strategies
+    """
+    import algotrade.strategies as strat
+
+    return [f for f in dir(strat) if not f.startswith("_")]
+
+
+def __get_and_calculate_data(ticker, start_date): # deprecate this
     # Gets data and applies calculations
     from algotrade.calculations import calculateData
+
     df = getData(ticker, start_date=start_date)
     df = calculateData(df)
     return df
-    
 
-def calculateTickersDf(ticker_list, start_date):
+
+def calculateTickersDf(ticker_list : List[str], start_date : str) -> Union[pd.DataFrame, pd.Series]:
     """
     Retrieves and calculates data for multiple tickers in list using multiprocessing, returns merged dataframe
 
-    Args: 
+    Args:
         ticker_list : list(str)
             list of tickers to calculate data for
         start_date : str
@@ -184,13 +207,16 @@ def calculateTickersDf(ticker_list, start_date):
             Dataframe of calculated and merged ticker data
     """
     import concurrent.futures
+
     results = []
     sucesfull = 0
     failed_tickers = []
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
         res = {
-            executor.submit(__get_and_calculate_data, ticker, start_date=start_date): ticker
+            executor.submit(
+                __get_and_calculate_data, ticker, start_date=start_date
+            ): ticker
             for ticker in ticker_list
         }
         for future in concurrent.futures.as_completed(res):
@@ -204,26 +230,27 @@ def calculateTickersDf(ticker_list, start_date):
                 print("%r generated an exception: %s" % (ticker, exc))
     return pd.concat(results)
 
-def calculateInvestment(timespan_months, investment_sum, profit_percent):
+
+def calculateInvestment(timespan_months : int, investment_sum : int, profit_percent : int):
     """
     Calculates and prints investment statistics for given timespan, investment sum and average profit percentage
-    
+
     Args:
         timespan_months : int
             timespan in months to calculate investment for
         investment_sum : int
             sum of money invested monthly
         profit_percent : int
-            average monthly percent return on investment ex.: 7 % 
+            average monthly percent return on investment ex.: 7 %
 
-    Returns:   
+    Returns:
         None
             Instead prints statistics to console
     """
     invested = investment_sum
-    profit_percent = profit_percent/100
-    for month in range(1, timespan_months+1):
-        invested += invested*(profit_percent)
+    profit_percent = profit_percent / 100
+    for month in range(1, timespan_months + 1):
+        invested += invested * (profit_percent)
     print(f"invested after timespan: {invested:.2f}$")
     print(f"growth: {(invested - investment_sum):.2f}$")
     print(f"income per month: {(invested * profit_percent):.2f}$")
