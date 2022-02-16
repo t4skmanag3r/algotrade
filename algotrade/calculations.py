@@ -1,3 +1,6 @@
+# Entire file can be deprecated after removal from general.py dependencies
+# since indicators are calculated with external ta library
+
 import pandas as pd
 import numpy as np
 
