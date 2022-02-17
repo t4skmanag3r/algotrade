@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
-from abc import ABC, abstractmethod
 
 
-def combineStrategies(
+def _combineStrategies(
     df,
     buy_strategies,
     buy_weights,
@@ -11,7 +10,7 @@ def combineStrategies(
     sell_weights,
     buy_threshold,
     sell_threshold,
-):
+):  # deprecated
     """
     Combines given strategies into one, based on given weights and thresholds,
     works by adding/subtrating from total score and applying threshold from trigering Buy/Sell signals,
@@ -57,45 +56,7 @@ def combineStrategies(
     return buy_signals, sell_signals
 
 
-# Different implementatiuon of score based on weights and constant differential column values
-# Not yet fully implemented
-
-# def combineStrategies(df, strategies, weights, biases, buy_threshold, sell_threshold):
-#     def add_sub_score(row):
-#         score = 0
-#         for signal, weight, bias in zip(strategies, weights, biases):
-#             # print(row[signal], weight, bias)
-#             score += row[signal] * weight + bias
-#         return score
-
-#     scores = list(df.apply(add_sub_score, axis=1).values)
-#     buy_signals = [True if score > buy_threshold else False for score in scores]
-#     sell_signals = [True if score < -sell_threshold else False for score in scores]
-#     return buy_signals, sell_signals
-
-
-def strategyList():
-    """
-    Returns list of possible strategies to use, these are callable functions
-    """
-    strat_list = [
-        "buy_conv",
-        "sell_conv",
-        "buy_cloud",
-        "sell_cloud",
-        "buy_leadspan",
-        "sell_leadspan",
-        "Buy_MA_MACD",
-        "Sell_MA_MACD",
-    ]
-    # strat_list = []
-    # strat_list += [f"Ichimoku.{strat}" for strat in dir(Ichimoku) if strat.startswith('_') is False]
-    # func_list = [strategy_MA_MACD]
-    # strat_list += [func.__qualname__ for func in func_list]
-    return strat_list
-
-
-class Strategy(ABC):
+class Strategy:
     def __init__(self) -> None:
         pass
 

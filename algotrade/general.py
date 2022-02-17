@@ -182,7 +182,12 @@ def getStrategies() -> List[str]:
     """
     import algotrade.strategies as strat
 
-    return [f for f in dir(strat) if not f.startswith("_")]
+    strategies = [f for f in dir(strat) if not f.startswith("_")]
+    # for removing base imports
+    for imp in ["pd", "np"]:
+        strategies.remove(imp)
+
+    return strategies
 
 
 def __get_and_calculate_data(ticker, start_date):  # deprecate this
