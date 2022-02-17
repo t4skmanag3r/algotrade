@@ -123,9 +123,8 @@ class MovingAverageAnd200SMA(StrategySimple):
         self.long = self.indicator(self.df.close, window=self.periods_long)
         self.ma200 = sma_indicator(self.df.close, window=200)
         self.short.shift()
-        self.buy_signals = (self.short > self.long) & (
-            (self.short.shift(1) < self.long.shift(1)) & (self.ma200 < self.df.close)
-        )
+
+        self.buy_signals = (self.short > self.long) & (self.ma200 < self.df.close)
         self.sell_signals = self.short < self.long
 
     def plot(self, days=None):
