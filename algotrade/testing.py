@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 class NewStrategy:
     """
     Create a new strategy based on strategies.combineStrategies(), used for constructing a strategy before running the calculation itself
@@ -17,12 +18,20 @@ class NewStrategy:
             threshold needed to triger buy signal
         buy_threshold : int
             threshold needed to triger sell signal (non negative)
-        
+
         Returns:
             <NewStrategy> object which on call uses args on strategies.combinedStrategies()
     """
 
-    def __init__(self, buy_strategies, buy_weights, sell_strategies, sell_weights, buy_threshold, sell_threshold):
+    def __init__(
+        self,
+        buy_strategies,
+        buy_weights,
+        sell_strategies,
+        sell_weights,
+        buy_threshold,
+        sell_threshold,
+    ):
         self.buy_strategies = buy_strategies
         self.buy_weights = buy_weights
         self.sell_strategies = sell_strategies
@@ -43,7 +52,17 @@ sell_threshold = {self.sell_threshold}
 
     def __call__(self, df):
         from algotrade.strategies import combineStrategies
-        return combineStrategies(df, self.buy_strategies, self.buy_weights, self.sell_strategies, self.sell_weights, self.buy_threshold, self.sell_threshold)
+
+        return combineStrategies(
+            df,
+            self.buy_strategies,
+            self.buy_weights,
+            self.sell_strategies,
+            self.sell_weights,
+            self.buy_threshold,
+            self.sell_threshold,
+        )
+
 
 # different implimentation with weights and biases
 # class NewStrategy:
@@ -68,20 +87,21 @@ sell_threshold = {self.sell_threshold}
 #         from algotrade.strategies import combineStrategies
 #         return combineStrategies(df, self.strategies, self.weights, self.biases, self.buy_threshold, self.sell_threshold)
 
+
 class TestStrategy:
     """
     Class for testing strategies
 
-    Attributes: 
+    Attributes:
         ticker : str
             ticker to test strategy on
         start_date : str
             date to start testing from, format-"YYYY-MM-DD"
         strategy : <NewStrategy>
             class NewStrategy with set arguments to test on
-        df : pandas.DataFrame() 
+        df : pandas.DataFrame()
             dataframe of historical ticker data
-    
+
     Methods:
         calcStats()
             calculates strategy performance statistics
@@ -93,16 +113,16 @@ class TestStrategy:
             plots EMA graph
     """
 
-    def __init__(self, ticker : str, strategy, start_date='2012-01-01', df=None):
+    def __init__(self, ticker: str, strategy, start_date="2012-01-01", df=None):
         """
-        Args: 
+        Args:
             ticker : str
                 ticker to test strategy on
             start_date : str
                 date to start testing from, format-"YYYY-MM-DD"
             strategy : <NewStrategy>
                 class NewStrategy with set arguments to test on
-            df : pandas.DataFrame() 
+            df : pandas.DataFrame()
                 dataframe of historical ticker data
         """
         self.ticker = ticker
@@ -123,33 +143,42 @@ stats = {self.stats}
         """
         Calculates performance statistics
         """
-        from algotrade.general import getData, getBuySellDates, calcProfitsWithDate, calcStats
+        from algotrade.general import (
+            getData,
+            getBuySellDates,
+            calcProfitsWithDate,
+            calcStats,
+        )
         from algotrade.calculations import calculateData
-        
-        if isinstance (self.df, pd.DataFrame):
+
+        if isinstance(self.df, pd.DataFrame):
             try:
-                self.df = self.df.loc[self.df['ticker'] == self.ticker].copy()
+                self.df = self.df.loc[self.df["ticker"] == self.ticker].copy()
             except Exception as e:
                 raise e
         else:
             self.df = getData(self.ticker, self.start_date)
             # self.df = calculateData(self.df)
-        
-        self.strategy = self.strategy(self.df)
-        buy_signals, sell_signals = self.strategy.apply()
-        self.buy_dates, self.sell_dates = getBuySellDates(self.df, buy_signals, sell_signals)
+
+        buy_signals, sell_signals = self.strategy.apply(self.df)
+        self.buy_dates, self.sell_dates = getBuySellDates(
+            self.df, buy_signals, sell_signals
+        )
         self.profits = calcProfitsWithDate(self.df, self.buy_dates, self.sell_dates)
         self.stats = calcStats(self.profits)
 
     def plotProfitDistribution(self):
         import matplotlib.pyplot as plt
+
         plt.figure(figsize=(14, 6))
-        plt.hist([i[0]*100 for i in self.profits], bins='doane')
+        plt.hist([i[0] * 100 for i in self.profits], bins="doane")
         plt.xlabel("Profit %")
 
         return plt.show()
 
-    def plotBuySell(self, days=None, display_strategy=False, display={}, scale_log=False):
+    def plotBuySell(
+        self, days=None, display_strategy=False, display={}, scale_log=False
+    ):
         """
         Plots historical price data for ticker with matplotlib
 
@@ -173,6 +202,7 @@ stats = {self.stats}
         """
         # setting up figure
         import matplotlib.pyplot as plt
+
         f1 = plt.figure(figsize=(24, 9))
         ax1 = f1.add_subplot(111)
 
@@ -186,13 +216,13 @@ stats = {self.stats}
 
         buy_dates = [date for date in self.buy_dates if date in df.index.values]
         sell_dates = [date for date in self.sell_dates if date in df.index.values]
-        profits = [x[0]*100 for x in self.profits]
-        profits = profits[(len(profits) - len(sell_dates)):]
+        profits = [x[0] * 100 for x in self.profits]
+        profits = profits[(len(profits) - len(sell_dates)) :]
         # print(f"buy dates:\n{buy_dates},\nsell_dates:\n{sell_dates}")
 
         # ploting price
         ax1.plot(df.index, df.close, color="gray")
-        legend = ['price']
+        legend = ["price"]
 
         # ploting strategy indicators
         if display_strategy:
@@ -229,7 +259,7 @@ stats = {self.stats}
                     s=f"{profits[i]:.2f}%",
                     fontdict=dict(size=12),
                 )
-        
+
         # showing legend and labels
         ax1.legend(legend)
         plt.xlabel("Date")
@@ -237,15 +267,15 @@ stats = {self.stats}
 
         # log scale graph
         if scale_log:
-            ax1.yscale('log')
+            ax1.yscale("log")
 
         # autoscaling
-        ax1.autoscale(axis='y')
+        ax1.autoscale(axis="y")
 
         return plt.show()
 
 
-def testStrategyMultipleStocks(ticker_list, strategy, start_date='2012-01-01', df=None):
+def testStrategyMultipleStocks(ticker_list, strategy, start_date="2012-01-01", df=None):
     """
     Tests strategy on multiple tickers and returns dataframe of performance for each ticker
 
@@ -262,14 +292,16 @@ def testStrategyMultipleStocks(ticker_list, strategy, start_date='2012-01-01', d
             dataframe of perormance data for each ticker
     """
     import concurrent.futures
+
     results = []
     sucesfull = 0
     failed_tickers = []
-    
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
         res = {
-            executor.submit(TestStrategy, ticker, strategy=strategy, start_date=start_date, df=df): ticker
+            executor.submit(
+                TestStrategy, ticker, strategy=strategy, start_date=start_date, df=df
+            ): ticker
             for ticker in ticker_list
         }
         for future in concurrent.futures.as_completed(res):
@@ -278,15 +310,16 @@ def testStrategyMultipleStocks(ticker_list, strategy, start_date='2012-01-01', d
                 data = future.result()
                 if data != None:
                     stats = data.stats
-                    stats['ticker'] = ticker
+                    stats["ticker"] = ticker
                     results.append(stats)
                     sucesfull += 1
             except Exception as exc:
                 failed_tickers.append(ticker)
                 print("%r generated an exception: %s" % (ticker, exc))
     df = pd.DataFrame.from_dict(results)
-    df = df.set_index('ticker')
+    df = df.set_index("ticker")
     return df
+
 
 def main():
     # from strategies import strategy_MA_MACD
@@ -320,17 +353,35 @@ def main():
     # res = testStrategyMultipleStocks(tickers, strategy)
     # res.to_csv('stats_macd.csv')
     # print(res)
-    
-    from strategies import WeightedMovingAverage, ExponentialMovingAverage, MovingAverageAnd200SMA
+
+    from strategies import (
+        WeightedMovingAverage,
+        ExponentialMovingAverage,
+        MovingAverageAnd200SMA,
+    )
     import ploting
     from general import getData
     from ta.trend import ema_indicator
 
-    ticker = 'AMAT'
-    data = getData(ticker, '2012-01-01')
+    ticker = "AMAT"
+    data = getData(ticker, "2012-01-01")
+
     class NewStrat(MovingAverageAnd200SMA):
-            def __init__(self, df, periods_short=25, periods_long=32, name='ema', indicator=ema_indicator):
-                super().__init__(df, periods_short=periods_short, periods_long=periods_long, name=name, indicator=indicator)
+        def __init__(
+            self,
+            df,
+            periods_short=25,
+            periods_long=32,
+            name="ema",
+            indicator=ema_indicator,
+        ):
+            super().__init__(
+                df,
+                periods_short=periods_short,
+                periods_long=periods_long,
+                name=name,
+                indicator=indicator,
+            )
 
     test = TestStrategy(ticker, NewStrat, df=data)
 
@@ -338,13 +389,19 @@ def main():
 
     # test.plotProfitDistribution()
     # test.plotBuySell(scale_log=False, days=500, display_strategy=False, display={'ichimoku':None})
-    test.plotBuySell(scale_log=False, days=500, display_strategy=False, display={ploting.Ema:[200, 100], ploting.Ichimoku:None, ploting.Macd:None})
-    
+    test.plotBuySell(
+        scale_log=False,
+        days=500,
+        display_strategy=False,
+        display={ploting.Ema: [200, 100], ploting.Ichimoku: None, ploting.Macd: None},
+    )
+
     # import ploting
     # ploting.macd(data)
 
     # test.plotBuySell(display={'sma':[200]})
     # test.plotBuySell(display={'sma':[50, 100, 200]})
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
