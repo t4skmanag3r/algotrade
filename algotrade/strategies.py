@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from abc import ABC
 
 
 def _combineStrategies(
@@ -56,12 +57,11 @@ def _combineStrategies(
     return buy_signals, sell_signals
 
 
-class Strategy:
+class Strategy(ABC):
     def __init__(self) -> None:
         pass
 
     def _calc(self, df):
-        self.df = df
         self.buy_signals = []
         self.sell_signals = []
 
@@ -79,9 +79,9 @@ class StrategySimple(Strategy):
         self.legend = [f"{name+str(periods_short)}", f"{name+str(periods_long)}"]
 
     def _calc(self, df):
-        super()._calc(df)
-        self.short = self.indicator(self.df.close, window=self.periods_short)
-        self.long = self.indicator(self.df.close, window=self.periods_long)
+        self.df = df
+        self.short = self.indicator(df.close, window=self.periods_short)
+        self.long = self.indicator(df.close, window=self.periods_long)
         self.buy_signals = self.short > self.long
         self.sell_signals = self.short < self.long
 
@@ -97,20 +97,20 @@ class StrategySimple(Strategy):
 
 
 class WeightedMovingAverage(StrategySimple):
-    def __init__(self, periods_short=9, periods_long=18, name="wma"):
+    def __init__(self, periods_short=25, periods_long=32, name="wma"):
         from ta.trend import wma_indicator
 
         super().__init__(wma_indicator, periods_short, periods_long, name)
 
 
 class ExponentialMovingAverage(StrategySimple):
-    def __init__(self, periods_short=9, periods_long=18, name="ema"):
+    def __init__(self, periods_short=25, periods_long=32, name="ema"):
         from ta.trend import ema_indicator
 
         super().__init__(ema_indicator, periods_short, periods_long, name)
 
 
-class MovingAverageAnd200SMA(StrategySimple):
+class SMA200(StrategySimple):
     def __init__(self, indicator, periods_short, periods_long, name):
         super().__init__(indicator, periods_short, periods_long, name)
         self.legend = self.legend + ["ma200"]
@@ -137,17 +137,28 @@ class MovingAverageAnd200SMA(StrategySimple):
             plt.plot(self.df.index[-days:], self.ma200[-days:])
 
 
-def strategy_MA_MACD(df):  # Apply Moving Average and MACD strategy
-    df = df.copy()
-    from algotrade.calculations import calcSMA, calcMACD
+class MACD(SMA200):  # Apply Moving Average and MACD strategy
+    def __init__(self, periods_short=12, periods_long=26, name="macd"):
+        self.periods_short = periods_short
+        self.periods_long = periods_long
+        self.legend = ["macd", "macd_signal", "ma200"]
 
-    df = calcSMA(df, 200)
-    df = calcMACD(df)
-    buy_signals = ((df["close"] > df["MA200"]) == True) & (
-        (df["MACD"] > df["MACDSignal"]) == True
-    )
-    sell_signals = (df["MACD"] < df["MACDSignal"]) == True
-    return buy_signals.values, sell_signals.values
+    def _calc(self, df):
+        from ta.trend import macd_signal, macd
+        from ta.trend import sma_indicator
+
+        self.df = df
+        self.short = macd(
+            self.df.close, window_slow=self.periods_short, window_fast=self.periods_long
+        )
+        self.long = macd_signal(
+            self.df.close, window_slow=self.periods_short, window_fast=self.periods_long
+        )
+        self.ma200 = sma_indicator(self.df.close, window=200)
+        self.short.shift()
+
+        self.buy_signals = (self.short > self.long) & (self.ma200 < self.df.close)
+        self.sell_signals = self.short < self.long
 
 
 class Ichimoku:

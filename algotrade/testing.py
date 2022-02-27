@@ -157,10 +157,11 @@ stats = {self.stats}
             except Exception as e:
                 raise e
         else:
+            print("Retrieving data")
             self.df = getData(self.ticker, self.start_date)
             # self.df = calculateData(self.df)
 
-        buy_signals, sell_signals = self.strategy.apply(self.df)
+        buy_signals, sell_signals = self.strategy.apply(df=self.df)
         self.buy_dates, self.sell_dates = getBuySellDates(
             self.df, buy_signals, sell_signals
         )
@@ -321,87 +322,123 @@ def testStrategyMultipleStocks(ticker_list, strategy, start_date="2012-01-01", d
     return df
 
 
-def main():
-    # from strategies import strategy_MA_MACD
-    # buy_strategies = ["buy_conv", "buy_cloud", "buy_leadspan"]
-    # buy_weights = [1, 4, 3]
-    # buy_weights = [2, 1, 3]
-    # sell_strategies = ["sell_conv", "sell_cloud", "sell_leadspan"]
-    # sell_weights = [1, 3, 1]
-    # sell_weights = [1, 1, 1]
-    # buy_threshold = 4
-    # sell_threshold = 3
-    # buy_threshold = 0
-    # sell_threshold = 0
-    # strategy = NewStrategy(buy_strategies, buy_weights, sell_strategies, sell_weights, buy_threshold, sell_threshold)
+# def main():
+# from strategies import strategy_MA_MACD
+# buy_strategies = ["buy_conv", "buy_cloud", "buy_leadspan"]
+# buy_weights = [1, 4, 3]
+# buy_weights = [2, 1, 3]
+# sell_strategies = ["sell_conv", "sell_cloud", "sell_leadspan"]
+# sell_weights = [1, 3, 1]
+# sell_weights = [1, 1, 1]
+# buy_threshold = 4
+# sell_threshold = 3
+# buy_threshold = 0
+# sell_threshold = 0
+# strategy = NewStrategy(buy_strategies, buy_weights, sell_strategies, sell_weights, buy_threshold, sell_threshold)
 
-    # strategy = strategy_MA_MACD
-    # testStrat = TestStrategy('AAPL', '2012-01-01', strategy)
-    # stats = testStrat.stats
-    # from pprint import pprint
-    # pprint(stats)
-    # testStrat.plotBuySell(1000, display_ichimoku=False, display_ma=True)
+# strategy = strategy_MA_MACD
+# testStrat = TestStrategy('AAPL', '2012-01-01', strategy)
+# stats = testStrat.stats
+# from pprint import pprint
+# pprint(stats)
+# testStrat.plotBuySell(1000, display_ichimoku=False, display_ma=True)
 
-    # testStrat.plotMACD(90)
-    # testStrat.plotEMA(90)
+# testStrat.plotMACD(90)
+# testStrat.plotEMA(90)
 
-    # from general import get_sp500, get_revolut_stocks
-    # # tickers = get_sp500()
-    # tickers = get_revolut_stocks()
-    # df = pd.read_csv('temp.csv')
-    # tickers = list(df.ticker.unique())
-    # res = testStrategyMultipleStocks(tickers, strategy)
-    # res.to_csv('stats_macd.csv')
-    # print(res)
+# from general import get_sp500, get_revolut_stocks
+# # tickers = get_sp500()
+# tickers = get_revolut_stocks()
+# df = pd.read_csv('temp.csv')
+# tickers = list(df.ticker.unique())
+# res = testStrategyMultipleStocks(tickers, strategy)
+# res.to_csv('stats_macd.csv')
+# print(res)
 
-    from strategies import (
-        WeightedMovingAverage,
-        ExponentialMovingAverage,
-        MovingAverageAnd200SMA,
-    )
-    import ploting
-    from general import getData
-    from ta.trend import ema_indicator
+# from strategies import (
+#     StrategySimple,
+#     WeightedMovingAverage,
+#     ExponentialMovingAverage,
+#     SMA200,
+#     MACD,
+# )
+# import ploting
+# from general import getData
+# from ta.trend import ema_indicator
 
-    ticker = "AMAT"
-    data = getData(ticker, "2012-01-01")
+# ticker = "AMAT"
+# data = getData(ticker, "2012-01-01")
 
-    class NewStrat(MovingAverageAnd200SMA):
-        def __init__(
-            self,
-            df,
-            periods_short=25,
-            periods_long=32,
-            name="ema",
-            indicator=ema_indicator,
-        ):
-            super().__init__(
-                df,
-                periods_short=periods_short,
-                periods_long=periods_long,
-                name=name,
-                indicator=indicator,
-            )
+# class NewStrat(SMA200):
+#     def __init__(
+#         self,
+#         periods_short=25,
+#         periods_long=32,
+#         name="ema",
+#     ):
+#         super().__init__(
+#             indicator=ema_indicator,
+#             periods_short=periods_short,
+#             periods_long=periods_long,
+#             name=name,
+#         )
 
-    test = TestStrategy(ticker, NewStrat, df=data)
+# strategy = MACD()
+# test = TestStrategy(ticker, strategy, df=data)
+# print(test)
 
-    print(test)
+# test.plotBuySell(scale_log=False, display_strategy=True, days=500)
 
-    # test.plotProfitDistribution()
-    # test.plotBuySell(scale_log=False, days=500, display_strategy=False, display={'ichimoku':None})
-    test.plotBuySell(
-        scale_log=False,
-        days=500,
-        display_strategy=False,
-        display={ploting.Ema: [200, 100], ploting.Ichimoku: None, ploting.Macd: None},
-    )
+# from tqdm import tqdm
 
-    # import ploting
-    # ploting.macd(data)
+# results = pd.DataFrame(
+#     columns=[
+#         "short",
+#         "long",
+#         "profit_sum",
+#         "profit_mean",
+#         "profit_median",
+#         "profit_win",
+#         "num_trades",
+#     ]
+# )
 
-    # test.plotBuySell(display={'sma':[200]})
-    # test.plotBuySell(display={'sma':[50, 100, 200]})
+# for short in tqdm(range(3, 60, 2)):
+#     for long in tqdm(range(short + 2, 80, 2)):
+#         strategy = SMA200(
+#             indicator=ema_indicator,
+#             periods_short=short,
+#             periods_long=long,
+#             name="ema",
+#         )
+#         test = TestStrategy(ticker, strategy, df=data)
+#         results = pd.concat(
+#             [
+#                 results,
+#                 pd.DataFrame.from_dict(
+#                     {"short": [short], "long": [long], **test.stats},
+#                 ),
+#             ],
+#             ignore_index=True,
+#         )
+
+# results.to_csv("results.csv")
+
+# test.plotProfitDistribution()
+# test.plotBuySell(scale_log=False, display_strategy=True)
+# test.plotBuySell(
+#     scale_log=False,
+#     days=500,
+#     display_strategy=False,
+#     display={ploting.Ema: [200, 100], ploting.Ichimoku: None, ploting.Macd: None},
+# )
+
+# import ploting
+# ploting.macd(data)
+
+# test.plotBuySell(display={'sma':[200]})
+# test.plotBuySell(display={'sma':[50, 100, 200]})
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
