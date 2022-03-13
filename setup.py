@@ -1,13 +1,9 @@
 from setuptools import setup, find_packages
-import codecs
-import os
 
-here = os.path.abspath(os.path.dirname(__file__))
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
 
-with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
-    long_description = "\n" + fh.read()
-
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 DESCRIPTION = "Algorithmic trading strategy creation and testing"
 LONG_DESCRIPTION = (
     "A package that makes creating and testing algorithmic trading strategies simple"
