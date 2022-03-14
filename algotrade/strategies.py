@@ -137,6 +137,90 @@ class SMA200(StrategySimple):
             plt.plot(self.df.index[-days:], self.ma200[-days:])
 
 
+class RSI(Strategy):
+    def __init__(self, rsi_upper_thresh=70, rsi_lower_thresh=30) -> None:
+        self.rsi_upper_thresh = rsi_upper_thresh
+        self.rsi_lower_thresh = rsi_lower_thresh
+        self.legend = []
+
+    def _calc(self, df):
+        from ta.momentum import rsi
+
+        self.df = df
+
+        self.rsi = rsi(df["close"], window=14)
+        self.buy_signals = self.rsi < self.rsi_lower_thresh
+        self.sell_signals = self.rsi > self.rsi_upper_thresh
+
+    def plot(self, days=None):
+        from algotrade.ploting import RSI
+
+        if days is None:
+            RSI(df=self.df, rsi=self.rsi).plot()
+        else:
+            RSI(df=self.df, rsi=self.rsi).plot(days=days)
+
+
+class RSI_MACD(Strategy):
+    def __init__(
+        self, rsi_upper_thresh=70, rsi_lower_thresh=30, macd_short=12, macd_long=26
+    ) -> None:
+        self.rsi_upper_thresh = rsi_upper_thresh
+        self.rsi_lower_thresh = rsi_lower_thresh
+        self.macd_short = macd_short
+        self.macd_long = macd_long
+        self.legend = []
+
+    def _calc(self, df):
+        from ta.momentum import rsi
+        from ta.trend import MACD
+
+        self.df = df
+
+        self.rsi = rsi(df["close"], window=14)
+        self.macd = MACD(
+            df["close"], window_fast=self.macd_short, window_slow=self.macd_long
+        )
+        self.macd_buy_signals = self.macd.macd_signal() > self.macd.macd()
+        self.macd_sell_signals = self.macd.macd_signal() < self.macd.macd()
+        self.rsi_buy_signals = self.rsi < self.rsi_lower_thresh
+        self.rsi_sell_signals = self.rsi > self.rsi_upper_thresh
+        self.buy_signals = []
+        self.sell_signals = []
+        rsi_triger = False
+        for signal_rsi, signal_macd in zip(self.rsi_buy_signals, self.macd_buy_signals):
+            if signal_rsi:
+                rsi_triger = True
+            if rsi_triger and signal_macd:
+                self.buy_signals.append(True)
+                rsi_triger = False
+            else:
+                self.buy_signals.append(False)
+        for signal_rsi, signal_macd in zip(
+            self.rsi_sell_signals, self.macd_sell_signals
+        ):
+            if signal_rsi:
+                rsi_triger = True
+            if rsi_triger and signal_macd:
+                self.sell_signals.append(True)
+                rsi_triger = False
+            else:
+                self.sell_signals.append(False)
+
+    def plot(self, days=None):
+        from algotrade.ploting import Macd, RSI
+
+        df = self.df
+        rsi = self.rsi
+        if days:
+            df = df[-days:]
+            rsi = rsi[-days:]
+        Macd(
+            df=df, timeframe_short=self.macd_short, timeframe_long=self.macd_long
+        ).plot()
+        RSI(df=df, rsi=rsi).plot()
+
+
 class MACD(SMA200):  # Apply Moving Average and MACD strategy
     def __init__(self, periods_short=12, periods_long=26, name="macd"):
         self.periods_short = periods_short
