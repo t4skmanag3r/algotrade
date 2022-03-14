@@ -245,10 +245,10 @@ stats = {self.stats}
 
         # ploting buy/sell signals
         ax1.scatter(
-            df.loc[buy_dates].index, df.loc[buy_dates]["adjclose"], marker="^", c="g"
+            df.loc[buy_dates].index, df.loc[buy_dates]["close"], marker="^", c="g"
         )
         ax1.scatter(
-            df.loc[sell_dates].index, df.loc[sell_dates]["adjclose"], marker="v", c="r"
+            df.loc[sell_dates].index, df.loc[sell_dates]["close"], marker="v", c="r"
         )
 
         # displaying signal profit text
@@ -256,7 +256,7 @@ stats = {self.stats}
             if i < len(sell_dates):
                 ax1.text(
                     df.loc[s].name,
-                    df.loc[s]["adjclose"] - (df["close"].max() / 100),
+                    df.loc[s]["close"] - (df["close"].max() / 100),
                     s=f"{profits[i]:.2f}%",
                     fontdict=dict(size=12),
                 )
