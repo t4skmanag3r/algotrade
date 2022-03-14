@@ -92,7 +92,6 @@ class Macd:
         self.df = df
         self.data = self._calc(MACD, timeframe_short, timeframe_long, timeframe_signal)
         self.legend = []
-        self.plot()
 
     def _calc(self, indicator, timeframe_short, timeframe_long, timeframe_signal):
         macd = indicator(
@@ -109,4 +108,27 @@ class Macd:
         ax2.plot(self.macd_signal, color="red")
         ax2.bar(self.macd_diff.index, self.macd_diff.values, color="lightblue")
         f2.legend(["macd", "macd_signal", "macd_diff"])
+        return ax2
+
+
+class RSI:
+    def __init__(self, df, rsi=None) -> None:
+        if rsi is not None:
+            self.rsi = rsi
+        else:
+            self._calc()
+        self.df = df
+
+    def _calc(self, timeframe=14):
+        from ta.momentum import rsi
+
+        self.rsi = rsi(self.df["close"], window=timeframe)
+
+    def plot(self):
+        f2 = plt.figure(figsize=(24, 9))
+        ax2 = plt.axes()
+        ax2.plot(self.df.index, self.rsi, color="cyan")
+        f2.legend(["rsi"])
+        ax2.axhline(y=70)
+        ax2.axhline(y=30)
         return ax2
