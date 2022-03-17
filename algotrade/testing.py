@@ -203,6 +203,7 @@ stats = {self.stats}
         """
         # setting up figure
         import matplotlib.pyplot as plt
+        import matplotlib.ticker as plticker
 
         f1 = plt.figure(figsize=(24, 9))
         ax1 = f1.add_subplot(111)
@@ -222,8 +223,12 @@ stats = {self.stats}
         # print(f"buy dates:\n{buy_dates},\nsell_dates:\n{sell_dates}")
 
         # ploting price
-        ax1.plot(df.index, df.close, color="gray")
+        ax1.plot(df.index.astype(str), df.close, color="gray")
         legend = ["price"]
+
+        # for x tick spacing
+        loc = plticker.AutoLocator()  # this locator puts ticks at regular intervals
+        ax1.xaxis.set_major_locator(loc)
 
         # ploting strategy indicators
         if display_strategy:
@@ -244,19 +249,31 @@ stats = {self.stats}
                     raise TypeError
 
         # ploting buy/sell signals
+        scatter_buy = df.loc[buy_dates]
+        scatter_sell = df.loc[sell_dates]
         ax1.scatter(
-            df.loc[buy_dates].index, df.loc[buy_dates]["close"], marker="^", c="g"
+            scatter_buy.index.astype(str),
+            scatter_buy["close"],
+            marker="^",
+            c="g",
         )
         ax1.scatter(
-            df.loc[sell_dates].index, df.loc[sell_dates]["close"], marker="v", c="r"
+            scatter_sell.index.astype(str),
+            scatter_sell["close"],
+            marker="v",
+            c="r",
         )
 
         # displaying signal profit text
         for i, s in enumerate(sell_dates):
             if i < len(sell_dates):
+                s_dat = df.loc[s]
+                date = str(s_dat.name)
+                if date not in list(df.index.astype(str)):
+                    date = date.split(" ")[0]
                 ax1.text(
-                    df.loc[s].name,
-                    df.loc[s]["close"] - (df["close"].max() / 100),
+                    date,
+                    s_dat["close"] - (s_dat["close"].max() / 100),
                     s=f"{profits[i]:.2f}%",
                     fontdict=dict(size=12),
                 )

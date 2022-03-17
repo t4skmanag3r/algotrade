@@ -158,7 +158,7 @@ class RSI(Strategy):
         if days is None:
             RSI(df=self.df, rsi=self.rsi).plot()
         else:
-            RSI(df=self.df, rsi=self.rsi).plot(days=days)
+            RSI(df=self.df[-days:], rsi=self.rsi[-days:]).plot()
 
 
 class RSI_MACD(Strategy):
@@ -187,23 +187,39 @@ class RSI_MACD(Strategy):
         self.rsi_sell_signals = self.rsi > self.rsi_upper_thresh
         self.buy_signals = []
         self.sell_signals = []
-        rsi_triger = False
-        for signal_rsi, signal_macd in zip(self.rsi_buy_signals, self.macd_buy_signals):
-            if signal_rsi:
-                rsi_triger = True
-            if rsi_triger and signal_macd:
+        rsi_triger_buy = False
+        rsi_triger_sell = False
+        bought = [0]
+        for i, (
+            signal_rsi_buy,
+            signal_macd_buy,
+            signal_rsi_sell,
+            signal_macd_sell,
+        ) in enumerate(
+            zip(
+                self.rsi_buy_signals,
+                self.macd_buy_signals,
+                self.rsi_sell_signals,
+                self.macd_sell_signals,
+            )
+        ):
+            if signal_rsi_buy:
+                rsi_triger_buy = True
+            if rsi_triger_buy and signal_macd_buy:
                 self.buy_signals.append(True)
-                rsi_triger = False
+                bought.append(df.iloc[i].close)
+                rsi_triger_buy = False
             else:
                 self.buy_signals.append(False)
-        for signal_rsi, signal_macd in zip(
-            self.rsi_sell_signals, self.macd_sell_signals
-        ):
-            if signal_rsi:
-                rsi_triger = True
-            if rsi_triger and signal_macd:
+            if signal_rsi_sell:
+                rsi_triger_sell = True
+            if (
+                rsi_triger_sell
+                and signal_macd_sell
+                or self.df.iloc[i].close < bought[-1]
+            ):
                 self.sell_signals.append(True)
-                rsi_triger = False
+                rsi_triger_sell = False
             else:
                 self.sell_signals.append(False)
 

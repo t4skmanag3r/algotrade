@@ -3,6 +3,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+class Plotting:
+    def __init__(self, df: pd.DataFrame) -> None:
+        self.df = df
+
+    def plot(self):
+        import matplotlib.ticker as plticker
+
+        f2 = plt.figure(figsize=(24, 9))
+        ax2 = plt.axes()
+
+        loc = plticker.AutoLocator()
+        ax2.xaxis.set_major_locator(loc)
+        return f2, ax2
+
+
 class Indicator:
     def __init__(self, df: pd.DataFrame, indicator, timeframe) -> None:
         self.df = df
@@ -67,7 +82,7 @@ class Ichimoku:
         )
 
 
-class Macd:
+class Macd(Plotting):
     """
     Plots MACD graph
 
@@ -89,7 +104,7 @@ class Macd:
     ) -> None:
         from ta.trend import MACD
 
-        self.df = df
+        super().__init__(df)
         self.data = self._calc(MACD, timeframe_short, timeframe_long, timeframe_signal)
         self.legend = []
 
@@ -102,22 +117,25 @@ class Macd:
         self.macd_diff = macd.macd_diff()
 
     def plot(self):
-        f2 = plt.figure(figsize=(24, 9))
-        ax2 = plt.axes()
-        ax2.plot(self.macd, color="green")
-        ax2.plot(self.macd_signal, color="red")
-        ax2.bar(self.macd_diff.index, self.macd_diff.values, color="lightblue")
-        f2.legend(["macd", "macd_signal", "macd_diff"])
+        f2, ax2 = super().plot()
+        ax2.plot(self.macd.index.astype(str), self.macd.values, color="green")
+        ax2.plot(
+            self.macd_signal.index.astype(str), self.macd_signal.values, color="red"
+        )
+        ax2.bar(
+            self.macd_diff.index.astype(str), self.macd_diff.values, color="lightblue"
+        )
+        ax2.legend(["macd", "macd_signal", "macd_diff"])
         return ax2
 
 
-class RSI:
+class RSI(Plotting):
     def __init__(self, df, rsi=None) -> None:
+        super().__init__(df)
         if rsi is not None:
             self.rsi = rsi
         else:
             self._calc()
-        self.df = df
 
     def _calc(self, timeframe=14):
         from ta.momentum import rsi
@@ -125,10 +143,10 @@ class RSI:
         self.rsi = rsi(self.df["close"], window=timeframe)
 
     def plot(self):
-        f2 = plt.figure(figsize=(24, 9))
-        ax2 = plt.axes()
-        ax2.plot(self.df.index, self.rsi, color="cyan")
-        f2.legend(["rsi"])
+        f2, ax2 = super().plot()
+
+        ax2.plot(self.df.index.astype(str), self.rsi, color="cyan")
+        ax2.legend(["rsi"])
         ax2.axhline(y=70)
         ax2.axhline(y=30)
         return ax2
