@@ -29,8 +29,7 @@ class Indicator:
         return indicator(self.df.close, timeframe)
 
     def plot(self) -> None:
-        print(self.data)
-        plt.plot(self.data)
+        plt.plot(self.df.index.astype(str), self.data, color="c")
 
 
 class Sma(Indicator):

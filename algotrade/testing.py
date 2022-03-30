@@ -113,7 +113,17 @@ class TestStrategy:
             plots EMA graph
     """
 
-    def __init__(self, ticker: str, strategy, start_date="2012-01-01", df=None):
+    def __init__(
+        self,
+        ticker: str,
+        strategy,
+        start_date="2012-01-01",
+        df=None,
+        stop_loss=False,
+        stop_loss_prc=5,
+        take_profit=False,
+        take_profit_prc=10,
+    ):
         """
         Args:
             ticker : str
@@ -129,6 +139,10 @@ class TestStrategy:
         self.start_date = start_date
         self.strategy = strategy
         self.df = df
+        self.stop_loss = stop_loss
+        self.stop_loss_prc = stop_loss_prc
+        self.take_profit = take_profit
+        self.take_profit_prc = take_profit_prc
         self.calcStats()
 
     def __repr__(self):
@@ -163,7 +177,13 @@ stats = {self.stats}
 
         buy_signals, sell_signals = self.strategy.apply(df=self.df)
         self.buy_dates, self.sell_dates = getBuySellDates(
-            self.df, buy_signals, sell_signals
+            self.df,
+            buy_signals,
+            sell_signals,
+            stop_loss=self.stop_loss,
+            stop_loss_prc=self.stop_loss_prc,
+            take_profit=self.take_profit,
+            take_profit_prc=self.take_profit_prc,
         )
         self.profits = calcProfitsWithDate(self.df, self.buy_dates, self.sell_dates)
         self.stats = calcStats(self.profits)

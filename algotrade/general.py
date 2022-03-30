@@ -61,6 +61,10 @@ def getBuySellDates(
     df: pd.DataFrame,
     buy_signals: Union[List[bool], np.ndarray],
     sell_signals: Union[List[bool], np.ndarray],
+    stop_loss=False,
+    stop_loss_prc=5,
+    take_profit=False,
+    take_profit_prc=10,
 ) -> Tuple[List[pd.Timestamp], List[pd.Timestamp]]:
     """
     Uses logic to invert buy/sell signals and retrieve buy/sell dates
@@ -88,20 +92,41 @@ def getBuySellDates(
         if row["buy_signal"] == True and buying == False:
             if first != True:
                 buying = True
-                if len(df) > i + 1:
-                    buy_dates.append(row.name)
-                else:
-                    buy_dates.append(row.name)
+                buy_dates.append(row.name)
+                if stop_loss:
+                    stop = calculateStopLossPercent(df, row.name, stop_loss_prc)
+                if take_profit:
+                    take = calculateTakeProfitPercent(df, row.name, take_profit_prc)
+
         elif row["sell_signal"] == True and buying == True:
             if first != True:
                 buying = False
-                if len(df) > i + 1:
+                sell_dates.append(row.name)
+        if buying == True:
+            if stop_loss:
+                if row["close"] < stop:
+                    buying = False
                     sell_dates.append(row.name)
-                else:
+            elif take_profit:
+                if row["close"] > take:
+                    buying = False
                     sell_dates.append(row.name)
+
         elif row["sell_signal"] == True and buying == False and first == True:
             first = False
     return buy_dates, sell_dates
+
+
+def calculateStopLossPercent(
+    df: pd.DataFrame, buy_date: pd.Timestamp, percent: float
+) -> float:
+    return df.loc[buy_date].close - (df.loc[buy_date].close * (percent / 100))
+
+
+def calculateTakeProfitPercent(
+    df: pd.DataFrame, buy_date: pd.Timestamp, percent: float
+) -> float:
+    return df.loc[buy_date].close + (df.loc[buy_date].close * (percent / 100))
 
 
 def calcProfitsWithDate(
