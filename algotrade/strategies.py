@@ -238,14 +238,18 @@ class RSI_MACD(Strategy):
 
 
 class MACD(SMA200):  # Apply Moving Average and MACD strategy
-    def __init__(self, periods_short=12, periods_long=26, name="macd"):
+    def __init__(
+        self, periods_short=12, periods_long=26, sma=False, sma_period=100, name="macd"
+    ):
         self.periods_short = periods_short
         self.periods_long = periods_long
-        self.legend = ["macd", "macd_signal", "ma200"]
+        self.sma = sma
+        self.sma_period = sma_period
+        self.legend = ["ma" + str(sma_period)]
 
     def _calc(self, df):
-        from ta.trend import macd_signal, macd
-        from ta.trend import sma_indicator
+        from ta.trend import macd_signal, macd, sma_indicator
+        from ta.momentum import rsi
 
         self.df = df
         self.short = macd(
@@ -254,11 +258,40 @@ class MACD(SMA200):  # Apply Moving Average and MACD strategy
         self.long = macd_signal(
             self.df.close, window_slow=self.periods_short, window_fast=self.periods_long
         )
-        self.ma200 = sma_indicator(self.df.close, window=200)
+        self.ma = sma_indicator(self.df.close, window=self.sma_period)
+        self.rsi = rsi(self.df.close)
         self.short.shift()
 
-        self.buy_signals = (self.short > self.long) & (self.ma200 < self.df.close)
+        if self.sma:
+            self.buy_signals = (
+                (self.short > self.long) & (self.ma < self.df.close) & (self.rsi < 65)
+            )
+        else:
+            self.buy_signals = self.short > self.long & (self.ma < self.df.close) & (
+                self.rsi < 65
+            )
         self.sell_signals = self.short < self.long
+
+    def plot(self, days=None):
+        from algotrade.ploting import Macd, Sma, RSI
+
+        df = self.df
+        if days is not None:
+            df = self.df[-days:]
+
+        Sma(df, timeframe=self.sma_period).plot()
+        Macd(df).plot()
+        RSI(df).plot()
+
+
+class ChandelierExitRSI(Strategy):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def _calc(self):
+
+        self.buy_signals = []
+        self.sell_signals = []
 
 
 class Ichimoku:

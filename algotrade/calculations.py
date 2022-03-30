@@ -1,10 +1,105 @@
-# Entire file can be deprecated after removal from general.py dependencies
-# since indicators are calculated with external ta library
-
 import pandas as pd
 import numpy as np
 
 
+class HeikinAshi:
+    def __init__(self, df) -> None:
+        self.df = df
+        self.calculate()
+
+    def calculate(self):
+        self.val_close = (
+            self.df["open"] + self.df["high"] + self.df["low"] + self.df["close"]
+        ) / 4
+        val_open = []
+        first = True
+        for i, (_, row) in enumerate(self.df.iterrows()):
+            if first == True:
+                open = (row.open + row.close) / 2
+                val_open.append(open)
+                first = False
+            else:
+                open = (open + self.val_close[i - 1]) / 2
+                val_open.append(open)
+        # self.val_open = (self.df["open"].shift(1) + self.df["close"].shift(1)) / 2
+        self.val_open = val_open
+        temp_df = self.df.copy()
+        temp_df["open"] = self.val_open
+        temp_df["close"] = self.val_close
+        self.val_high = temp_df[["open", "high", "close"]].max(axis=1)
+        self.val_low = temp_df[["open", "low", "close"]].min(axis=1)
+
+    def close(self):
+        return self.val_close
+
+    def open(self):
+        return self.val_open
+
+    def high(self):
+        return self.val_high
+
+    def low(self):
+        return self.val_low
+
+
+class ChandelierExit:
+    def __init__(
+        self,
+        df,
+        atr_period=1,
+        atr_multiplier=1.85,
+        use_close=False,
+    ) -> None:
+        self.df = df
+        self.atr_period = atr_period
+        self.atr_multiplier = atr_multiplier
+        self.use_close = False
+        self.calculate()
+
+    def calculate(self) -> None:
+        from ta.volatility import AverageTrueRange
+
+        atr = AverageTrueRange(
+            self.df.high,
+            self.df.low,
+            self.df.close,
+            window=self.atr_period,
+            fillna=True,
+        ).average_true_range()
+
+        atr = atr * self.atr_multiplier
+
+        highest_high = self.df.high.rolling(window=self.atr_period).max().values
+        lowest_low = self.df.low.rolling(window=self.atr_period).min().values
+
+        long_stop = highest_high - atr
+        self.long_stop_prev = long_stop.shift(1)
+
+        short_stop = lowest_low + atr
+        self.short_stop_prev = short_stop.shift(1)
+
+        cond_long = self.df.close.shift(1) > long_stop.shift(1)
+        cond_long_true = np.vstack((long_stop, self.long_stop_prev)).T.max(1)
+        self.long_stop = np.where(cond_long == True, cond_long_true, long_stop)
+
+        cond_short = self.df.close.shift(1) < short_stop.shift(1)
+        cond_short_true = np.vstack((short_stop, self.short_stop_prev)).T.min(1)
+        self.short_stop = np.where(cond_short == True, cond_short_true, short_stop)
+
+    def exit_long(self):
+        return self.long_stop
+
+    def exit_short(self):
+        return self.short_stop
+
+    def exit_long_prev(self):
+        return self.long_stop_prev
+
+    def exit_short_prev(self):
+        return self.short_stop_prev
+
+
+# -- Everything below this can be deprecated
 def calculateData(df):
     """
     Calculates all technical indicators
