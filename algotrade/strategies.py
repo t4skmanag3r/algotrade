@@ -267,8 +267,8 @@ class MACD(SMA200):  # Apply Moving Average and MACD strategy
                 (self.short > self.long) & (self.ma < self.df.close) & (self.rsi < 65)
             )
         else:
-            self.buy_signals = self.short > self.long & (self.ma < self.df.close) & (
-                self.rsi < 65
+            self.buy_signals = (
+                (self.short > self.long) & (self.ma < self.df.close) & (self.rsi < 65)
             )
         self.sell_signals = self.short < self.long
 
@@ -294,45 +294,164 @@ class ChandelierExitRSI(Strategy):
         self.sell_signals = []
 
 
-class Ichimoku:
-    def __buy_sell_filter(
-        df, var_pos, var_neg
-    ):  # filters buying selling if var1 > var2  and vice versa
-        buy_signals = df[var_pos] > df[var_neg]
-        sell_signals = df[var_pos] < df[var_neg]
-        return buy_signals.values, sell_signals.values
+class Ichimoku(Strategy):
+    def __init__(self, low_period=9, med_period=26, high_period=52) -> None:
+        super().__init__()
+        self.low_period = low_period
+        self.med_period = med_period
+        self.high_period = high_period
+        self.legend = []
 
-    @classmethod
-    def strategy_Ichimoku_conv_base(cls, df):
-        return cls.__buy_sell_filter(df, "convline", "baseline")
+    def _calc(self, df):
+        from ta.trend import IchimokuIndicator
 
-    def strategy_Ichimoku_cloud_price(df):
-        buy_signals = (
-            ((df["close"] > df["leadspan_a"]) == True)
-            & ((df["leadspan_a"] > df["leadspan_b"]) == True)
-        ) | (
-            ((df["close"] > df["leadspan_b"]) == True)
-            & ((df["leadspan_a"] < df["leadspan_b"]) == True)
+        self.df = df
+        self.ichimoku = IchimokuIndicator(
+            high=df.high,
+            low=df.low,
+            window1=self.low_period,
+            window2=self.med_period,
+            window3=self.high_period,
         )
-        sell_signals = (
-            ((df["close"] < df["leadspan_a"]) == True)
-            & ((df["leadspan_a"] > df["leadspan_b"]) == True)
-        ) | (
-            ((df["close"] < df["leadspan_b"]) == True)
-            & ((df["leadspan_a"] < df["leadspan_b"]) == True)
+        cloud_price_buy, cloud_price_sell = self.cloud_price()
+        cloud_color_buy, cloud_color_sell = self.cloud_color()
+        cloud_dirrection_buy, cloud_dirrection_sell = self.cloud_dirrection()
+        cloud_growth_buy, cloud_growth_sell = self.cloud_growth()
+        conv_base_above_buy, conv_base_above_sell = self.conv_base_above()
+        conv_base_cross_buy, conv_base_cross_sell = self.conv_base_cross()
+        conv_dirrection_buy, conv_dirrection_sell = self.conv_dirrection()
+        (
+            conv_base_diff_growth_buy,
+            conv_base_diff_growth_sell,
+        ) = self.conv_base_diff_growth()
+        lag_price_buy, lag_price_sell = self.lag_price()
+        lag_cloud_buy, lag_cloud_sell = self.lag_cloud()
+
+        self.buy_signals = (
+            cloud_price_buy
+            & cloud_color_buy
+            & cloud_dirrection_buy
+            & cloud_growth_buy
+            & conv_base_above_buy
+            # & conv_base_cross_buy
+            & conv_dirrection_buy
+            & conv_base_diff_growth_buy
+            & lag_price_buy
+            & lag_cloud_buy
         )
-        return buy_signals.values, sell_signals.values
+        self.sell_signals = cloud_price_sell | lag_price_sell
 
-    @classmethod
-    def strategy_Ichimoku_leadspan(cls, df):
-        return cls.__buy_sell_filter(df, "leadspan_a", "leadspan_b")
+    def plot(self, days=None):
+        from algotrade.ploting import Ichimoku
 
+        df = self.df
 
-def applyStrategiesIchimoku(df):
-    df["buy_conv"], df["sell_conv"] = Ichimoku.strategy_Ichimoku_conv_base(df)
-    df["buy_cloud"], df["sell_cloud"] = Ichimoku.strategy_Ichimoku_cloud_price(df)
-    df["buy_leadspan"], df["sell_leadspan"] = Ichimoku.strategy_Ichimoku_leadspan(df)
-    return df
+        if days is not None:
+            df = self.df[-days:]
+
+        Ichimoku(df).plot()
+
+    def cloud_price(self):
+        leadspan_a = self.ichimoku.ichimoku_a().shift(self.med_period)
+        leadspan_b = self.ichimoku.ichimoku_b().shift(self.med_period)
+
+        cloud_high = np.max(pd.concat([leadspan_a, leadspan_b], axis=1).T)
+        price_low = np.min(self.df[["open", "close"]], axis=1)
+        cloud_low = np.min(pd.concat([leadspan_a, leadspan_b], axis=1).T)
+        price_high = np.max(self.df[["open", "close"]], axis=1)
+
+        buy_signals = price_low > cloud_high
+        sell_signals = price_high <= cloud_low
+        return buy_signals, sell_signals
+
+    def cloud_color(self):
+        leadspan_a = self.ichimoku.ichimoku_a()
+        leadspan_b = self.ichimoku.ichimoku_b()
+
+        buy_signals = leadspan_a > leadspan_b
+        sell_signals = leadspan_a <= leadspan_b
+        return buy_signals, sell_signals
+
+    def cloud_dirrection(self):
+        leadspan_a = self.ichimoku.ichimoku_a()
+        leadspan_b = self.ichimoku.ichimoku_b()
+
+        buy_signals = (leadspan_a - leadspan_a.shift(1)) + (
+            leadspan_b - leadspan_b.shift(1)
+        ) > 0
+        sell_signals = (leadspan_a - leadspan_a.shift(1)) + (
+            leadspan_b - leadspan_b.shift(1)
+        ) <= 0
+        return buy_signals, sell_signals
+
+    def cloud_growth(self):
+        leadspan_a = self.ichimoku.ichimoku_a()
+        leadspan_b = self.ichimoku.ichimoku_b()
+
+        buy_signals = abs(leadspan_a - leadspan_b) > abs(
+            leadspan_a.shift(1) - leadspan_b.shift(1)
+        )
+        sell_signals = abs(leadspan_a - leadspan_b) < abs(
+            leadspan_a.shift(1) - leadspan_b.shift(1)
+        )
+        return buy_signals, sell_signals
+
+    def conv_base_above(self):
+        conv_line = self.ichimoku.ichimoku_conversion_line()
+        base_line = self.ichimoku.ichimoku_base_line()
+
+        buy_signals = conv_line > base_line
+        sell_signals = conv_line <= base_line
+        return buy_signals, sell_signals
+
+    def conv_base_cross(self):
+        conv_line = self.ichimoku.ichimoku_conversion_line()
+        base_line = self.ichimoku.ichimoku_base_line()
+
+        buy_signals = (conv_line > base_line) & (
+            conv_line.shift(1) < base_line.shift(1)
+        )
+        sell_signals = (conv_line < base_line) & (
+            conv_line.shift(1) > base_line.shift(1)
+        )
+        return buy_signals, sell_signals
+
+    def conv_dirrection(self):
+        conv_line = self.ichimoku.ichimoku_conversion_line()
+
+        buy_signals = (conv_line - conv_line.shift(1)) > 0
+        sell_signals = (conv_line - conv_line.shift(1)) < 0
+        return buy_signals, sell_signals
+
+    def conv_base_diff_growth(self):
+        conv_line = self.ichimoku.ichimoku_conversion_line()
+        base_line = self.ichimoku.ichimoku_base_line()
+
+        buy_signals = abs(conv_line - base_line) > abs(
+            conv_line.shift(1) - base_line.shift(1)
+        )
+        sell_signals = abs(conv_line - base_line) < abs(
+            conv_line.shift(1) - base_line.shift(1)
+        )
+        return buy_signals, sell_signals
+
+    def lag_price(self):
+        lag = self.df.close
+        past_price = np.max(self.df[["open", "close"]].shift(self.med_period), axis=1)
+        buy_signals = lag > past_price
+        sell_signals = lag < past_price
+        return buy_signals, sell_signals
+
+    def lag_cloud(self):
+        lag = self.df.close
+        leadspan_a = self.ichimoku.ichimoku_a()
+        leadspan_b = self.ichimoku.ichimoku_b()
+        cloud_high = np.max(pd.concat([leadspan_a, leadspan_b], axis=1).T)
+        cloud_low = np.min(pd.concat([leadspan_a, leadspan_b], axis=1).T)
+
+        buy_signals = lag > cloud_high.shift(self.med_period)
+        sell_signals = lag < cloud_low.shift(self.med_period)
+        return buy_signals, sell_signals
 
 
 # def main():

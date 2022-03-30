@@ -68,17 +68,20 @@ class Ichimoku:
         self.leadspan_b = ichimoku.ichimoku_b()
 
     def plot(self) -> None:
-        plt.plot(self.conv_line, color="green")
-        plt.plot(self.base_line, color="red")
-        plt.plot(self.leadspan_a, color="lightblue")
-        plt.plot(self.leadspan_b, color="tan")
+        plt.plot(self.df.index.astype(str), self.conv_line, color="darkorange")
+        plt.plot(self.df.index.astype(str), self.base_line, color="dodgerblue")
+        plt.plot(self.df.index.astype(str), self.leadspan_a.shift(26), color="green")
+        plt.plot(self.df.index.astype(str), self.leadspan_b.shift(26), color="red")
+
+        plt.plot(self.df.index.astype(str), self.df.close.shift(-26), color="plum")
         plt.fill_between(
-            self.leadspan_a.index,
-            self.leadspan_a.values,
-            self.leadspan_b.values,
+            self.df.index.astype(str),
+            self.leadspan_a.shift(26).values,
+            self.leadspan_b.shift(26).values,
             alpha=0.5,
             color="lightblue",
         )
+        plt.legend(self.legend)
 
 
 class Macd(Plotting):
