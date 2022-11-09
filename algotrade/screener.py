@@ -10,14 +10,14 @@ def __get_result_buy(
 
     today = datetime.today()
     try:
-        test = TestStrategy(ticker, start_date, strategy)
+        test = TestStrategy(ticker=ticker, start_date=start_date, strategy=strategy)
+        if len(test.buy_dates) != 0:
+            if (today - test.buy_dates[-1].to_pydatetime()).days < last_days:
+                stats = test.stats
+                return [ticker, test.buy_dates[-1], stats]
     except Exception as e:
         print(f"{ticker} : failed with exception [{e}]")
         return None
-    if len(test.buy_dates) != 0:
-        if (today - test.buy_dates[-1].to_pydatetime()).days < last_days:
-            stats = TestStrategy(ticker, "2012-01-01", strategy).stats
-            return [ticker, test.buy_dates[-1], stats]
     return None
 
 
@@ -100,48 +100,50 @@ def screenStocks(ticker_list, strategy, last_days):
     )
     stocks_to_buy = []
     for ticker in ticker_list:
-        test = __get_result_buy(ticker, start_date, last_days, strategy)
+        test = __get_result_buy(
+            ticker=ticker, start_date=start_date, last_days=last_days, strategy=strategy
+        )
         if test != None:
             stocks_to_buy.append(test)
             print(test)
     return stocks_to_buy
 
 
-def main():
-    from general import get_sp500, get_revolut_stocks
-    from testing import NewStrategy
+# def main():
+#     from general import get_sp500, get_revolut_stocks
+#     from testing import NewStrategy
 
-    # from strategies import strategy_MA_MACD
+#     # from strategies import strategy_MA_MACD
 
-    buy_strategies = ["buy_conv", "buy_cloud", "buy_leadspan"]
-    buy_weights = [1, 4, 3]
-    sell_strategies = ["sell_conv", "sell_cloud", "sell_leadspan"]
-    sell_weights = [1, 3, 1]
-    buy_threshold = 4
-    sell_threshold = 3
-    strategy = NewStrategy(
-        buy_strategies,
-        buy_weights,
-        sell_strategies,
-        sell_weights,
-        buy_threshold,
-        sell_threshold,
-    )
-    # strategy = strategy_MA_MACD
+#     buy_strategies = ["buy_conv", "buy_cloud", "buy_leadspan"]
+#     buy_weights = [1, 4, 3]
+#     sell_strategies = ["sell_conv", "sell_cloud", "sell_leadspan"]
+#     sell_weights = [1, 3, 1]
+#     buy_threshold = 4
+#     sell_threshold = 3
+#     strategy = NewStrategy(
+#         buy_strategies,
+#         buy_weights,
+#         sell_strategies,
+#         sell_weights,
+#         buy_threshold,
+#         sell_threshold,
+#     )
+#     # strategy = strategy_MA_MACD
 
-    # tickers = get_sp500()
-    tickers = get_revolut_stocks()
-    # tickers = ['AMD', 'AMAT', 'AAPL']
-    stocks_to_buy = screenStocks_Multiproccesed(tickers, strategy, 7)
-    print("-" * 100)
-    for stock in sorted(
-        stocks_to_buy, key=lambda x: x[1].to_pydatetime(), reverse=True
-    ):
-        print(stock)
+#     # tickers = get_sp500()
+#     tickers = get_revolut_stocks()
+#     # tickers = ['AMD', 'AMAT', 'AAPL']
+#     stocks_to_buy = screenStocks_Multiproccesed(tickers, strategy, 7)
+#     print("-" * 100)
+#     for stock in sorted(
+#         stocks_to_buy, key=lambda x: x[1].to_pydatetime(), reverse=True
+#     ):
+#         print(stock)
 
-    # x = __get_result_buy('AAPL', '2020-01-01', 14, strategy)
-    # print(x)
+#     # x = __get_result_buy('AAPL', '2020-01-01', 14, strategy)
+#     # print(x)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

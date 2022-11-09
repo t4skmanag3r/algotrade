@@ -1,4 +1,3 @@
-
 # Checking dependencies
 hard_dependencies = ("pandas", "numpy", "yahoo_fin", "ta")
 missing_dependencies = []
@@ -16,5 +15,12 @@ if missing_dependencies:
 del hard_dependencies, dependency, missing_dependencies
 
 
-
-from algotrade import general, calculations, strategies, testing, screener, alerts
+from algotrade import (
+    general,
+    calculations,
+    strategies,
+    testing,
+    screener,
+    alerts,
+    ploting,
+)

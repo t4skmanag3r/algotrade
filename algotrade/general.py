@@ -25,11 +25,18 @@ def get_revolut_stocks() -> List[str]:
     Returns:
         list(str)
     """
-    import requests
 
-    req = requests.get("https://globefunder.com/revolut-stocks-list/")
-    tickers = list(pd.read_html(req.content)[0]["Symbol"])
-    tickers = [ticker.replace(".", "-") for ticker in tickers]
+    ## No longer contains all tickers
+    # import requests
+    # req = requests.get("https://globefunder.com/revolut-stocks-list/")
+    # tickers = list(pd.read_html(req.content)[0]["Symbol"])
+    # tickers = [ticker.replace(".", "-") for ticker in tickers]
+
+    tickers = list(
+        pd.read_html(
+            "https://github.com/nmapx/revolut-stocks-list/blob/master/LIST.md"
+        )[0].Ticker.values
+    )
     return tickers
 
 
@@ -215,15 +222,6 @@ def getStrategies() -> List[str]:
     return strategies
 
 
-def __get_and_calculate_data(ticker, start_date):  # deprecate this
-    # Gets data and applies calculations
-    from algotrade.calculations import calculateData
-
-    df = getData(ticker, start_date=start_date)
-    df = calculateData(df)
-    return df
-
-
 def calculateTickersDf(
     ticker_list: List[str], start_date: str
 ) -> Union[pd.DataFrame, pd.Series]:
@@ -248,9 +246,7 @@ def calculateTickersDf(
 
     with concurrent.futures.ProcessPoolExecutor() as executor:
         res = {
-            executor.submit(
-                __get_and_calculate_data, ticker, start_date=start_date
-            ): ticker
+            executor.submit(getData, ticker, start_date=start_date): ticker
             for ticker in ticker_list
         }
         for future in concurrent.futures.as_completed(res):
@@ -261,7 +257,7 @@ def calculateTickersDf(
                 sucesfull += 1
             except Exception as exc:
                 failed_tickers.append(ticker)
-                print("%r generated an exception: %s" % (ticker, exc))
+                print(f"{ticker} generated an exception: {exc}")
     return pd.concat(results)
 
 

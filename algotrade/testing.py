@@ -173,7 +173,6 @@ stats = {self.stats}
         else:
             print("Retrieving data")
             self.df = getData(self.ticker, self.start_date)
-            # self.df = calculateData(self.df)
 
         buy_signals, sell_signals = self.strategy.apply(df=self.df)
         self.buy_dates, self.sell_dates = getBuySellDates(

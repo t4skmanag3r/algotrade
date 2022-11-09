@@ -237,9 +237,9 @@ class RSI_MACD(Strategy):
         RSI(df=df, rsi=rsi).plot()
 
 
-class MACD(SMA200):  # Apply Moving Average and MACD strategy
+class MACD(SMA200):
     def __init__(
-        self, periods_short=12, periods_long=26, sma=False, sma_period=100, name="macd"
+        self, periods_short=12, periods_long=26, sma=False, sma_period=200, name="macd"
     ):
         self.periods_short = periods_short
         self.periods_long = periods_long
@@ -248,28 +248,26 @@ class MACD(SMA200):  # Apply Moving Average and MACD strategy
         self.legend = ["ma" + str(sma_period)]
 
     def _calc(self, df):
-        from ta.trend import macd_signal, macd, sma_indicator
+        from ta.trend import macd_signal, macd, sma_indicator, macd_diff
         from ta.momentum import rsi
 
         self.df = df
         self.short = macd(
-            self.df.close, window_slow=self.periods_short, window_fast=self.periods_long
+            self.df.close, window_slow=self.periods_long, window_fast=self.periods_short
         )
         self.long = macd_signal(
-            self.df.close, window_slow=self.periods_short, window_fast=self.periods_long
+            self.df.close, window_slow=self.periods_long, window_fast=self.periods_short
+        )
+        self.macd_diff = macd_diff(
+            self.df.close, window_slow=self.periods_long, window_fast=self.periods_short
         )
         self.ma = sma_indicator(self.df.close, window=self.sma_period)
         self.rsi = rsi(self.df.close)
-        self.short.shift()
 
         if self.sma:
-            self.buy_signals = (
-                (self.short > self.long) & (self.ma < self.df.close) & (self.rsi < 65)
-            )
+            self.buy_signals = (self.short > self.long) & (self.ma < self.df.close)
         else:
-            self.buy_signals = (
-                (self.short > self.long) & (self.ma < self.df.close) & (self.rsi < 65)
-            )
+            self.buy_signals = self.short > self.long
         self.sell_signals = self.short < self.long
 
     def plot(self, days=None):
@@ -281,7 +279,6 @@ class MACD(SMA200):  # Apply Moving Average and MACD strategy
 
         Sma(df, timeframe=self.sma_period).plot()
         Macd(df).plot()
-        RSI(df).plot()
 
 
 class ChandelierExitRSI(Strategy):
@@ -295,11 +292,14 @@ class ChandelierExitRSI(Strategy):
 
 
 class Ichimoku(Strategy):
-    def __init__(self, low_period=9, med_period=26, high_period=52) -> None:
+    def __init__(
+        self, low_period=9, med_period=26, high_period=52, ma_period=200
+    ) -> None:
         super().__init__()
         self.low_period = low_period
         self.med_period = med_period
         self.high_period = high_period
+        self.ma_period = ma_period
         self.legend = []
 
     def _calc(self, df):
@@ -326,6 +326,9 @@ class Ichimoku(Strategy):
         ) = self.conv_base_diff_growth()
         lag_price_buy, lag_price_sell = self.lag_price()
         lag_cloud_buy, lag_cloud_sell = self.lag_cloud()
+
+        ma = df.close.rolling(window=self.ma_period).mean()
+        price_above_ma = df.close > ma
 
         self.buy_signals = (
             cloud_price_buy
@@ -452,6 +455,106 @@ class Ichimoku(Strategy):
         buy_signals = lag > cloud_high.shift(self.med_period)
         sell_signals = lag < cloud_low.shift(self.med_period)
         return buy_signals, sell_signals
+
+
+class RSI_MA(Strategy):
+    def __init__(
+        self,
+        periods_short=25,
+        periods_long=100,
+        period_ma=22,
+        use_ma=True,
+        above_price_ma=None,
+        macd_direction=False,
+        trigger_switch=False,
+        name="rsi",
+    ):
+        self.periods_short = periods_short
+        self.periods_long = periods_long
+        self.period_ma = period_ma
+        self.use_ma = use_ma
+        self.above_price_ma = above_price_ma
+        self.macd_direction = macd_direction
+        self.trigger_switch = trigger_switch
+        self.legend = []
+
+    def _calc(self, df):
+        from ta.momentum import rsi
+        from ta.trend import macd_diff
+
+        self.df = df
+        self.rsi_short = rsi(self.df.close, window=self.periods_short)
+        self.rsi_long = rsi(self.df.close, window=self.periods_long)
+        if self.use_ma:
+            self.rsi_short = self.rsi_short.rolling(window=self.period_ma).mean()
+            self.rsi_long = self.rsi_long.rolling(window=self.period_ma).mean()
+
+        if self.trigger_switch:
+            self.buy_signals = (self.rsi_short > self.rsi_long) & (
+                self.rsi_short.shift(1) < self.rsi_long.shift(1)
+            )
+        else:
+            self.buy_signals = self.rsi_short > self.rsi_long
+
+        self.sell_signals = (self.rsi_short < self.rsi_long) & (
+            self.rsi_short.shift(1) > self.rsi_long.shift(1)
+        )
+
+        if self.above_price_ma is not None:
+            self.buy_signals = self.buy_signals & (
+                self.df.close > self.df.close.rolling(self.above_price_ma).mean()
+            )
+        if self.macd_direction:
+            diff = macd_diff(self.df.close)
+            self.buy_signals = self.buy_signals & (diff > 0)
+
+    def plot(self, days=None):
+        from algotrade.ploting import RSI, Sma, Macd
+
+        df = self.df
+        if days is not None:
+            df = self.df[-days:]
+
+        if self.above_price_ma is not None:
+            Sma(df, timeframe=self.above_price_ma).plot()
+            self.legend = ["ma" + str(self.above_price_ma)]
+
+        if self.macd_direction is not None:
+            Macd(df).plot()
+
+        RSI(df, rsi=self.rsi_short[-days:], rsi_2=self.rsi_long[-days:]).plot()
+
+
+class StochasticOscilator(Strategy):
+    def __init__(self, stoch_window=14, stoch_smooth=3, ma_window=200, use_ma=True) -> None:
+        self.legend = []
+        self.stoch_window = stoch_window
+        self.stoch_smooth = stoch_smooth
+        self.ma_window = ma_window
+        self.use_ma = use_ma
+
+    def _calc(self, df):
+        from algotrade.custom_indicators import SlowStochasticOscillator as StOc
+
+        self.df = df
+        stoch = StOc(high=df['high'], low=df['low'], close=df['close'], window=self.stoch_window, smooth_window=self.stoch_smooth)
+        self.stoch_stoch = stoch.stoch()
+        self.stoch_signal = stoch.stoch_signal()
+        self.ma = df['close'].rolling(window=self.ma_window).mean()
+        self.buy_signals = (self.stoch_stoch > self.stoch_signal) & (self.stoch_stoch.shift(1) < self.stoch_signal.shift(1))
+        if self.use_ma:
+            self.buy_signals = self.buy_signals & (self.ma < df['close'])
+        self.sell_signals = (self.stoch_stoch < self.stoch_signal) & (self.stoch_stoch.shift(1) > self.stoch_signal.shift(1))
+    
+    def plot(self, days=None):
+        from algotrade.ploting import Stochastic
+
+        if days is None:
+            Stochastic(df=self.df, stoch_stoch=self.stoch_stoch, stoch_signal=self.stoch_signal).plot()
+        else:
+            Stochastic(df=self.df[-days:], stoch_stoch=self.stoch_stoch[-days:], stoch_signal=self.stoch_signal[-days:]).plot()
+        
+
 
 
 # def main():

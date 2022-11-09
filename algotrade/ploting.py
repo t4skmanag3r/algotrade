@@ -112,7 +112,7 @@ class Macd(Plotting):
 
     def _calc(self, indicator, timeframe_short, timeframe_long, timeframe_signal):
         macd = indicator(
-            self.df.close, timeframe_short, timeframe_long, timeframe_signal
+            self.df.close, timeframe_long, timeframe_short, timeframe_signal
         )
         self.macd = macd.macd()
         self.macd_signal = macd.macd_signal()
@@ -132,12 +132,13 @@ class Macd(Plotting):
 
 
 class RSI(Plotting):
-    def __init__(self, df, rsi=None) -> None:
+    def __init__(self, df, rsi=None, rsi_2=None) -> None:
         super().__init__(df)
         if rsi is not None:
             self.rsi = rsi
         else:
             self._calc()
+        self.rsi_2 = rsi_2
 
     def _calc(self, timeframe=14):
         from ta.momentum import rsi
@@ -149,6 +150,36 @@ class RSI(Plotting):
 
         ax2.plot(self.df.index.astype(str), self.rsi, color="cyan")
         ax2.legend(["rsi"])
+        if self.rsi_2 is not None:
+            ax2.plot(self.df.index.astype(str), self.rsi_2, color="orange")
+            ax2.legend(["rsi", "rsi_2"])
         ax2.axhline(y=70)
         ax2.axhline(y=30)
+        return ax2
+
+class Stochastic(Plotting):
+    def __init__(self, df, stoch_stoch=None, stoch_signal=None) -> None:
+        super().__init__(df)
+        if stoch_stoch is None or stoch_signal is None:
+            self._calc()
+        else:
+            self.stoch_stoch= stoch_stoch
+            self.stoch_signal = stoch_signal
+
+    def _calc(self, timeframe=14, smooth=3):
+        from algotrade.custom_indicators import SlowStochasticOscillator as StOc
+
+        stoch = StOc(high=self.df['high'], low=self.df['low'], close=self.df['close'], window=timeframe, smooth_window=smooth)
+        self.stoch_stoch = stoch.stoch()
+        self.stoch_signal = stoch.stoch_signal()
+
+    def plot(self):
+        f2, ax2 = super().plot()
+
+        ax2.plot(self.df.index.astype(str), self.stoch_stoch, color="green")
+        ax2.plot(self.df.index.astype(str), self.stoch_signal, color="red")
+
+        ax2.legend(["stoch", "stoch_signal"])
+        ax2.axhline(y=80)
+        ax2.axhline(y=20)
         return ax2
